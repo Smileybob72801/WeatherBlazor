@@ -1,0 +1,80 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IApiReaderService apiReader
+@using WeatherBlazor.Data.Model
+@using WeatherBlazor.Services
+
+<PageTitle>Forecast</PageTitle>
+
+<h3>Weather Forecast</h3>
+
+@if (forecastData is not null)
+{
+	<div class="forecast-tiles">
+		@for (int i = 0; i < forecastData.daily.temperature_2m_max.Count; i++)
+		{
+			<div class="forecast-tile">
+				<p><strong> @ProcessDateString(forecastData.daily.time[i], dayFormat)</strong></p>
+				<p><strong>High Temp:</strong> @forecastData.daily.temperature_2m_max[i] °F</p>
+				<p><strong>Low Temp:</strong> @forecastData.daily.temperature_2m_min[i] °F</p>
+				<p><strong>Heat Index:</strong> @forecastData.daily.apparent_temperature_max[i] °F</p>
+				<p><strong>Sunrise:</strong> @ProcessDateString(forecastData.daily.sunrise[i], timeFormat)</p>
+				<p><strong>Sunset:</strong> @ProcessDateString(forecastData.daily.sunset[i], timeFormat)</p>
+				<p><strong>Daylight Duration:</strong> @ConvertSecondsToHours(forecastData.daily.daylight_duration[i]) hours</p>
+				<p><strong>UV Index:</strong> @forecastData.daily.uv_index_clear_sky_max[i]</p>
+				<p><strong>Chance for Precipitation:</strong> @forecastData.daily.precipitation_probability_max[i] %</p>				
+				<p><strong>Max Wind Speed:</strong> @forecastData.daily.wind_speed_10m_max[i] mph</p>
+			</div>
+		}
+	</div>
+
+	<iframe src="https://radar.weather.gov/?settings=v1_eyJhZ2VuZGEiOnsiaWQiOiJ3ZWF0aGVyIiwiY2VudGVyIjpbLTkzLjE0MSwzNS4yNzhdLCJsb2NhdGlvbiI6Wy05My4xNDEsMzUuMjc4XSwiem9vbSI6NywibGF5ZXIiOiJicmVmX3FjZCJ9LCJhbmltYXRpbmciOnRydWUsImJhc2UiOiJzdGFuZGFyZCIsImFydGNjIjpmYWxzZSwiY291bnR5IjpmYWxzZSwiY3dhIjpmYWxzZSwicmZjIjpmYWxzZSwic3RhdGUiOmZhbHNlLCJtZW51Ijp0cnVlLCJzaG9ydEZ1c2VkT25seSI6dHJ1ZSwib3BhY2l0eSI6eyJhbGVydHMiOjAuNzYsImxvY2FsIjowLjYsImxvY2FsU3RhdGlvbnMiOjAuOCwibmF0aW9uYWwiOjAuNn19"
+			width="100%"
+			height="600"
+			frameborder="0"
+			style="border:0;"
+			allowfullscreen>
+	</iframe>
+
+}
+else
+{
+	<p>Loading forecast data...</p>
+}
+
+
+
+@code{
+	private const string dayFormat = "dddd";
+	private const string timeFormat = "HH:mm";
+
+	private const string baseAddress = "https://api.open-meteo.com/";
+
+	private const string requestUri = "/v1/forecast?latitude=35.2784&longitude=-93.1338&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,snow_depth,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index_clear_sky,is_day,cape&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,daylight_duration,uv_index_clear_sky_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&models=best_match";
+
+	private Root? forecastData;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await GetForecast();
+	}
+
+	private async Task GetForecast()
+	{
+		forecastData = await apiReader.ReadAsync<Root>(baseAddress, requestUri);
+	}
+
+	private string ProcessDateString(string dateString, string formatString)
+	{
+		if (DateTime.TryParse(dateString, out DateTime dateTime))
+		{
+			return dateTime.ToString(formatString);
+		}
+		else
+		{
+			throw new ArgumentException("Invalid date string format.");
+		}
+	}
+
+	private double ConvertSecondsToHours(double seconds) => Math.Round((seconds / 3600), 1);
+}

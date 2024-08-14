@@ -1,5 +1,6 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
 @inject IApiReaderService apiReader
 @inject IJsonDeserializerService jsonDeserializer;
 @using System.Text;
@@ -17,7 +18,8 @@
 	<div class="forecast-tiles">
 		@for (int i = 0; i < _forecastRoot?.properties.periods.Count; i++)
 		{
-			var period = _forecastRoot?.properties.periods[i];
+			ForecastPeriod? period = _forecastRoot?.properties.periods[i];
+
 			if (period != null)
 			{
 				<div class="forecast-tile">
@@ -30,8 +32,8 @@
 							else
 							{
 								// Determine if the period is for day or night
-								var isDayPeriod = i % 2 == 1; // Day periods are at odd indices (1, 3, 5,...), night periods are even indices (2, 4, 6,...)
-								var dayName = ProcessDateString(period.startTime.ToString(), _dayFormat);
+								bool isDayPeriod = i % 2 == 1; // Day periods are at odd indices (1, 3, 5,...), night periods are even indices (2, 4, 6,...)
+								string dayName = ProcessDateString(period.startTime.ToString(), _dayFormat);
 								@($"{dayName} {(isDayPeriod ? "" : "Night")}")
 							}
 						</strong>
@@ -40,7 +42,7 @@
 					<p><strong>Weather:</strong> @period.shortForecast</p>
 					<p><strong>Wind Speed:</strong> @period.windSpeed</p>
 					<p><strong>Wind Direction:</strong> @period.windDirection</p>
-					@if (@period.probabilityOfPrecipitation.value > 0)
+					@if (period.probabilityOfPrecipitation.value > 0)
 					{
 						<p><strong>Change for Precipitation:</strong> @period.probabilityOfPrecipitation.value %</p>
 					}
@@ -82,8 +84,12 @@ else
 
 
 @code{
+	private bool _isFirstRender = true;
+
 	private const string _dayFormat = "dddd";
 	private const string _timeFormat = "HH:mm";
+
+	private Location? _location;
 
 	private const string _baseAddress = "https://api.weather.gov/";
 
@@ -92,30 +98,6 @@ else
 
 	private PointRoot? _pointRoot;
 	private ForecastRoot? _forecastRoot;
-
-	protected override async Task OnInitializedAsync()
-	{
-		double latitude = 35.2781;
-		double longitude = -93.1337;
-		string pointRequestUri = $"/points/{latitude},{longitude}";
-
-		await GetPointRootJson(pointRequestUri);
-
-		_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
-			throw new ArgumentNullException(
-				$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
-
-		string? forecastUrl = _pointRoot?.properties.forecast;
-		string? forecastUri = forecastUrl?[_baseAddress.Length..];
-
-		await GetForecastJson(forecastUri ??
-			throw new ArgumentNullException(
-				$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
-
-		_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
-			throw new ArgumentNullException(
-				$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
-	}
 
 	private void SetForecastRoot(string forecastAsJson)
 	{
@@ -160,4 +142,67 @@ else
 	}
 
 	private double ConvertSecondsToHours(double seconds) => Math.Round((seconds / 3600), 1);
+
+	private async Task<Location?> GetLocation()
+	{
+		try
+		{
+			Location location = new();
+			location = await JSRuntime.InvokeAsync<Location>("getGeolocation");
+
+			string? latitudeFormatted = location.Latitude.ToString("F4");
+			string? longitudeFormatted = location.Longitude.ToString("F4");
+
+			location.Latitude = double.Parse(latitudeFormatted);
+			location.Longitude = double.Parse(longitudeFormatted);
+
+			return location;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine(ex);
+			return null;
+		}
+	}
+
+	public class Location
+	{
+		public double Latitude { get; set; }
+		public double Longitude { get; set; }
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			_isFirstRender = false;
+			// Call GetLocation after the first render
+			_location = await GetLocation();
+		}
+
+		string pointRequestUri = string.Empty;
+		if (_location is not null)
+		{
+			pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
+		}
+
+		await GetPointRootJson(pointRequestUri);
+
+		_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
+			throw new ArgumentNullException(
+				$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
+
+		string? forecastFullUrl = _pointRoot?.properties.forecast;
+		string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
+
+		await GetForecastJson(forecastUri ??
+			throw new ArgumentNullException(
+				$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
+
+		_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
+			throw new ArgumentNullException(
+				$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
+
+		StateHasChanged();
+	}
 }

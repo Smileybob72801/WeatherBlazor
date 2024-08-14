@@ -5,6 +5,7 @@
 @inject IJsonDeserializerService jsonDeserializer;
 @using System.Text;
 @using System.Text.Json.Serialization;
+@using System.Text.RegularExpressions
 @using WeatherBlazor.Data.Model
 @using WeatherBlazor.Services
 
@@ -14,43 +15,31 @@
 
 @if (_forecastAsJson is not null)
 {
-	
-	<div class="forecast-tiles">
-		@for (int i = 0; i < _forecastRoot?.properties.periods.Count; i++)
-		{
-			ForecastPeriod? period = _forecastRoot?.properties.periods[i];
-
-			if (period != null)
+	if (_forecastRoot is not null)
+	{
+		<div class="forecast-container">
+			@foreach (ForecastPeriod period in _forecastRoot.properties.periods)
 			{
 				<div class="forecast-tile">
-					<p>
-						<strong>
-							@if (i == 0)
-							{
-								@("Current Conditions")
-							}
-							else
-							{
-								// Determine if the period is for day or night
-								bool isDayPeriod = i % 2 == 1; // Day periods are at odd indices (1, 3, 5,...), night periods are even indices (2, 4, 6,...)
-								string dayName = ProcessDateString(period.startTime.ToString(), _dayFormat);
-								@($"{dayName} {(isDayPeriod ? "" : "Night")}")
-							}
-						</strong>
-					</p>
-					<p><strong>Temperature:</strong> @period.temperature @period.temperatureUnit</p>
-					<p><strong>Weather:</strong> @period.shortForecast</p>
-					<p><strong>Wind Speed:</strong> @period.windSpeed</p>
-					<p><strong>Wind Direction:</strong> @period.windDirection</p>
-					@if (period.probabilityOfPrecipitation.value > 0)
-					{
-						<p><strong>Change for Precipitation:</strong> @period.probabilityOfPrecipitation.value %</p>
-					}
-					<p><strong>Detailed Forecast:</strong> @period.detailedForecast</p>
+					<p><strong>@period.name</strong></p>
+					<div class="image-container">
+						<img src="@GetImageUrl(period)" alt="Weather icon" class="weather-icon" />
+						@if (period.probabilityOfPrecipitation.value > 0)
+						{
+							<div class="precipitation-chance">
+								@period.probabilityOfPrecipitation.value %
+							</div>
+						}
+					</div>
+					<p><strong>@period.temperature @period.temperatureUnit</strong></p>
+					<p><strong>@period.shortForecast</strong></p>
+					<p><strong>@DescribeWindSpeed(period.windSpeed)</strong></p>
 				</div>
 			}
-		}
-	</div>
+		</div>
+
+	}
+
 
 	<style>
 		.iframe-container {
@@ -75,6 +64,7 @@
 		</iframe>
 	</div>
 
+	<a href="https://www.vecteezy.com/free-vector/weather">Weather Vectors by Vecteezy</a>
 }
 else
 {
@@ -173,36 +163,128 @@ else
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
-		if (firstRender)
+		if (_isFirstRender)
 		{
 			_isFirstRender = false;
-			// Call GetLocation after the first render
+
 			_location = await GetLocation();
-		}
 
-		string pointRequestUri = string.Empty;
-		if (_location is not null)
+			if (_location is null)
+			{
+				Console.WriteLine("Location data is not available.");
+				return;
+			}
+
+			string pointRequestUri = string.Empty;
+			if (_location is not null)
+			{
+				pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
+			}
+
+			await GetPointRootJson(pointRequestUri);
+
+			_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
+				throw new ArgumentNullException(
+					$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
+
+			string? forecastFullUrl = _pointRoot?.properties.forecast;
+			string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
+
+			await GetForecastJson(forecastUri ??
+				throw new ArgumentNullException(
+					$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
+
+			_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
+				throw new ArgumentNullException(
+					$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
+
+			StateHasChanged();
+		}
+	}
+
+	private string GetImageUrl(ForecastPeriod period)
+	{
+		StringComparison comparison = StringComparison.OrdinalIgnoreCase;
+
+		if (period.detailedForecast.Contains("sunny", comparison) && period.detailedForecast.Contains("storm", comparison))
 		{
-			pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
+			return "images/WeatherElementIcons/sunnyTStorm.png";
+		}
+		if (period.detailedForecast.Contains("sunny", comparison) && period.detailedForecast.Contains("shower", comparison))
+		{
+			return "images/WeatherElementIcons/sunnyShowers.png";
+		}
+		else if (period.detailedForecast.Contains("storm", comparison) && period.detailedForecast.Contains("shower", comparison))
+		{
+			return "images/WeatherElementIcons/showersAndTStorms.png";
+		}
+		else if (period.detailedForecast.Contains("storm", comparison))
+		{
+			return "images/WeatherElementIcons/tStorm.png";
+		}
+		else if (period.detailedForecast.Contains("shower", comparison))
+		{
+			return "images/WeatherElementIcons/showers.png";
+		}
+		else if (period.detailedForecast.Contains("mostly cloudy", comparison))
+		{
+			if (period.isDaytime)
+			{
+				return "images/WeatherElementIcons/mostlyCloudyDay.png";
+			}
+
+			return "images/WeatherElementIcons/mostlyCloudyNight.png";
+		}
+		else if (period.detailedForecast.Contains("mostly clear", comparison))
+		{
+			if (period.isDaytime)
+			{
+				return "images/WeatherElementIcons/mostlyClearDay.png";
+			}
+
+			return "images/WeatherElementIcons/mostlyClearNight.png";
+		}
+		else
+		{
+			if(period.isDaytime)
+			{
+				return "images/WeatherElementIcons/sunny.png";
+			}
+
+			return "images/WeatherElementIcons/moon.png";
+		}
+	}
+
+	private string DescribeWindSpeed(string rangeOfWindspeeds)
+	{
+		int highestWindSpeedInRange = 0;
+
+		MatchCollection matches = Regex.Matches(rangeOfWindspeeds, @"\d+");
+
+		string lastMatch = matches.Last().ToString();
+
+		if (int.TryParse(lastMatch, out int result))
+		{
+			highestWindSpeedInRange = result;
 		}
 
-		await GetPointRootJson(pointRequestUri);
+		if (highestWindSpeedInRange > 0 || highestWindSpeedInRange <= 5)
+		{
+			return "Breezy";
+		}
+		else if (highestWindSpeedInRange > 5 || highestWindSpeedInRange <= 30)
+		{
+			return "Strong Winds";
+		}
+		else if (highestWindSpeedInRange > 30 || highestWindSpeedInRange <= 75)
+		{
+			return "Gale Winds!";
+		}
+		else if (highestWindSpeedInRange > 75)
+		{
+			return "HURRICANE FORCE WINDS!!!";
+		}
 
-		_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
-			throw new ArgumentNullException(
-				$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
-
-		string? forecastFullUrl = _pointRoot?.properties.forecast;
-		string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
-
-		await GetForecastJson(forecastUri ??
-			throw new ArgumentNullException(
-				$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
-
-		_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
-			throw new ArgumentNullException(
-				$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
-
-		StateHasChanged();
+		return "Calm";
 	}
 }

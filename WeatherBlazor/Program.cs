@@ -26,6 +26,7 @@ namespace WeatherBlazor
             builder.Services.AddScoped<AuthenticationStateProvider, PersistingRevalidatingAuthenticationStateProvider>();            
             builder.Services.AddScoped<IApiReaderService, ApiReaderService>();
             builder.Services.AddScoped<IRadarUrlService, RadarUrlService>();
+            builder.Services.AddScoped<IJsonDeserializerService, JsonDeserializerService>();
 
             builder.Services.AddAuthentication(options =>
                 {

@@ -1,6 +1,9 @@
 ﻿@page "/"
 @rendermode InteractiveServer
 @inject IApiReaderService apiReader
+@inject IJsonDeserializerService jsonDeserializer;
+@using System.Text;
+@using System.Text.Json.Serialization;
 @using WeatherBlazor.Data.Model
 @using WeatherBlazor.Services
 
@@ -8,33 +11,67 @@
 
 <h3>Weather Forecast</h3>
 
-@if (forecastData is not null)
+@if (_forecastAsJson is not null)
 {
+	
 	<div class="forecast-tiles">
-		@for (int i = 0; i < forecastData.daily.temperature_2m_max.Count; i++)
+		@for (int i = 0; i < _forecastRoot?.properties.periods.Count; i++)
 		{
-			<div class="forecast-tile">
-				<p><strong> @ProcessDateString(forecastData.daily.time[i], dayFormat)</strong></p>
-				<p><strong>High Temp:</strong> @forecastData.daily.temperature_2m_max[i] °F</p>
-				<p><strong>Low Temp:</strong> @forecastData.daily.temperature_2m_min[i] °F</p>
-				<p><strong>Heat Index:</strong> @forecastData.daily.apparent_temperature_max[i] °F</p>
-				<p><strong>Sunrise:</strong> @ProcessDateString(forecastData.daily.sunrise[i], timeFormat)</p>
-				<p><strong>Sunset:</strong> @ProcessDateString(forecastData.daily.sunset[i], timeFormat)</p>
-				<p><strong>Daylight Duration:</strong> @ConvertSecondsToHours(forecastData.daily.daylight_duration[i]) hours</p>
-				<p><strong>UV Index:</strong> @forecastData.daily.uv_index_clear_sky_max[i]</p>
-				<p><strong>Chance for Precipitation:</strong> @forecastData.daily.precipitation_probability_max[i] %</p>				
-				<p><strong>Max Wind Speed:</strong> @forecastData.daily.wind_speed_10m_max[i] mph</p>
-			</div>
+			var period = _forecastRoot?.properties.periods[i];
+			if (period != null)
+			{
+				<div class="forecast-tile">
+					<p>
+						<strong>
+							@if (i == 0)
+							{
+								@("Current Conditions")
+							}
+							else
+							{
+								// Determine if the period is for day or night
+								var isDayPeriod = i % 2 == 1; // Day periods are at odd indices (1, 3, 5,...), night periods are even indices (2, 4, 6,...)
+								var dayName = ProcessDateString(period.startTime.ToString(), _dayFormat);
+								@($"{dayName} {(isDayPeriod ? "" : "Night")}")
+							}
+						</strong>
+					</p>
+					<p><strong>Temperature:</strong> @period.temperature @period.temperatureUnit</p>
+					<p><strong>Weather:</strong> @period.shortForecast</p>
+					<p><strong>Wind Speed:</strong> @period.windSpeed</p>
+					<p><strong>Wind Direction:</strong> @period.windDirection</p>
+					@if (@period.probabilityOfPrecipitation.value > 0)
+					{
+						<p><strong>Change for Precipitation:</strong> @period.probabilityOfPrecipitation.value %</p>
+					}
+					<p><strong>Detailed Forecast:</strong> @period.detailedForecast</p>
+				</div>
+			}
 		}
 	</div>
 
-	<iframe src="https://radar.weather.gov/?settings=v1_eyJhZ2VuZGEiOnsiaWQiOiJ3ZWF0aGVyIiwiY2VudGVyIjpbLTkzLjE0MSwzNS4yNzhdLCJsb2NhdGlvbiI6Wy05My4xNDEsMzUuMjc4XSwiem9vbSI6NywibGF5ZXIiOiJicmVmX3FjZCJ9LCJhbmltYXRpbmciOnRydWUsImJhc2UiOiJzdGFuZGFyZCIsImFydGNjIjpmYWxzZSwiY291bnR5IjpmYWxzZSwiY3dhIjpmYWxzZSwicmZjIjpmYWxzZSwic3RhdGUiOmZhbHNlLCJtZW51Ijp0cnVlLCJzaG9ydEZ1c2VkT25seSI6dHJ1ZSwib3BhY2l0eSI6eyJhbGVydHMiOjAuNzYsImxvY2FsIjowLjYsImxvY2FsU3RhdGlvbnMiOjAuOCwibmF0aW9uYWwiOjAuNn19"
-			width="100%"
-			height="600"
-			frameborder="0"
-			style="border:0;"
+	<style>
+		.iframe-container {
+			width: 100%;
+			height: 600px;
+			border: 0;
+			overflow: hidden;
+		}
+
+			.iframe-container iframe {
+				width: 100%;
+				height: 100%;
+				border: 0;
+			}
+	</style>
+
+	<div class="iframe-container">
+		<iframe
+			class="iframe-weatherRadar"
+			src="https://radar.weather.gov/?settings=v1_eyJhZ2VuZGEiOnsiaWQiOiJ3ZWF0aGVyIiwiY2VudGVyIjpbLTkzLjE0MSwzNS4yNzhdLCJsb2NhdGlvbiI6Wy05My4xNDEsMzUuMjc4XSwiem9vbSI6NywibGF5ZXIiOiJicmVmX3FjZCJ9LCJhbmltYXRpbmciOnRydWUsImJhc2UiOiJzdGFuZGFyZCIsImFydGNjIjpmYWxzZSwiY291bnR5IjpmYWxzZSwiY3dhIjpmYWxzZSwicmZjIjpmYWxzZSwic3RhdGUiOmZhbHNlLCJtZW51Ijp0cnVlLCJzaG9ydEZ1c2VkT25seSI6dHJ1ZSwib3BhY2l0eSI6eyJhbGVydHMiOjAuNzYsImxvY2FsIjowLjYsImxvY2FsU3RhdGlvbnMiOjAuOCwibmF0aW9uYWwiOjAuNn19"
 			allowfullscreen>
-	</iframe>
+		</iframe>
+	</div>
 
 }
 else
@@ -45,23 +82,69 @@ else
 
 
 @code{
-	private const string dayFormat = "dddd";
-	private const string timeFormat = "HH:mm";
+	private const string _dayFormat = "dddd";
+	private const string _timeFormat = "HH:mm";
 
-	private const string baseAddress = "https://api.open-meteo.com/";
+	private const string _baseAddress = "https://api.weather.gov/";
 
-	private const string requestUri = "/v1/forecast?latitude=35.2784&longitude=-93.1338&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,snow_depth,pressure_msl,surface_pressure,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index_clear_sky,is_day,cape&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,daylight_duration,uv_index_clear_sky_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&models=best_match";
+	private string? _forecastAsJson;
+	private string? _pointRootAsJson;
 
-	private Root? forecastData;
+	private PointRoot? _pointRoot;
+	private ForecastRoot? _forecastRoot;
 
 	protected override async Task OnInitializedAsync()
 	{
-		await GetForecast();
+		double latitude = 35.2781;
+		double longitude = -93.1337;
+		string pointRequestUri = $"/points/{latitude},{longitude}";
+
+		await GetPointRootJson(pointRequestUri);
+
+		_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
+			throw new ArgumentNullException(
+				$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
+
+		string? forecastUrl = _pointRoot?.properties.forecast;
+		string? forecastUri = forecastUrl?[_baseAddress.Length..];
+
+		await GetForecastJson(forecastUri ??
+			throw new ArgumentNullException(
+				$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
+
+		_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
+			throw new ArgumentNullException(
+				$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
 	}
 
-	private async Task GetForecast()
+	private void SetForecastRoot(string forecastAsJson)
 	{
-		forecastData = await apiReader.ReadAsync<Root>(baseAddress, requestUri);
+		ArgumentNullException.ThrowIfNull(forecastAsJson);
+		_forecastRoot = jsonDeserializer.Deserialize<ForecastRoot>(forecastAsJson);
+	}
+
+	private void SetPointRoot(string pointRootAsJson)
+	{
+		ArgumentNullException.ThrowIfNull(pointRootAsJson);
+		_pointRoot = jsonDeserializer.Deserialize<PointRoot>(pointRootAsJson);
+	}
+
+	private T SetRoot<T>(string rootAsJson)
+	{
+		ArgumentNullException.ThrowIfNull(rootAsJson);
+
+		return jsonDeserializer.Deserialize<T>(rootAsJson) ??
+			throw new InvalidOperationException();
+	}
+
+	private async Task GetPointRootJson(string pointRequestUri)
+	{
+		_pointRootAsJson = await apiReader.ReadAsync(_baseAddress, pointRequestUri);
+	}
+
+	private async Task GetForecastJson(string forecastRequestUri)
+	{
+		_forecastAsJson = await apiReader.ReadAsync(_baseAddress, forecastRequestUri);
 	}
 
 	private string ProcessDateString(string dateString, string formatString)

@@ -7,18 +7,21 @@ namespace WeatherBlazor.Services
 {
     public interface IApiReaderService
     {
-        Task<T> ReadAsync<T>(string baseAddress, string requestUri);
+        Task<string> ReadAsync(string baseAddress, string requestUri);
     }
 
     public class ApiReaderService : IApiReaderService
     {
-        public async Task<Root> ReadAsync<Root>(string baseAddress, string requestUri)
+        public async Task<string> ReadAsync(string baseAddress, string requestUri)
         {
             using HttpClient client = new();
 
             client.BaseAddress = new Uri(baseAddress);
 
-            HttpResponseMessage responseMessage = await client.GetAsync(requestUri);
+			client.DefaultRequestHeaders.Add(
+				"User-Agent", "(weatherBlazor, Daniel Simmons, smileybob@72801@gmail.com)");
+
+			HttpResponseMessage responseMessage = await client.GetAsync(requestUri);
 
             responseMessage.EnsureSuccessStatusCode();
 
@@ -26,9 +29,7 @@ namespace WeatherBlazor.Services
 
             await Console.Out.WriteLineAsync(resultAsString);
 
-            Root? result = JsonSerializer.Deserialize<Root>(resultAsString);
-
-            return result ?? throw new InvalidOperationException("Null result");
+            return resultAsString ?? throw new InvalidOperationException("Null result");
         }
     }
 }

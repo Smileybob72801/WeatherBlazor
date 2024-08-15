@@ -107,6 +107,7 @@ else
 	private PointRoot? _pointRoot;
 	private ForecastRoot? _forecastRoot;
 	private HourlyForecastRoot? _hourlyForecastRoot;
+	private AlertRoot? alertRoot;
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -123,12 +124,14 @@ else
 			}
 
 			string pointRequestUri = string.Empty;
+			string allAlertsUri = string.Empty;
 			if (_location is not null)
 			{
 				pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
+				allAlertsUri = $"/alerts?point={_location.Latitude},{_location.Longitude}";
 			}
 
-			_pointRootAsJson = await GetRootJson(pointRequestUri);
+			_pointRootAsJson = await GetRootJson(_baseAddress, pointRequestUri);
 
 			_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
 				throw new ArgumentNullException(
@@ -140,13 +143,15 @@ else
 			string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
 			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddress.Length..];
 
-			_forecastAsJson = await GetRootJson(forecastUri ??
+			_forecastAsJson = await GetRootJson(_baseAddress, forecastUri ??
 				throw new ArgumentNullException(
 					$"{nameof(GetRootJson)} was called with {nameof(forecastUri)} as null."));
 
-			_hourlyForecastAsJson = await GetRootJson(hourlyForecastUri ??
+			_hourlyForecastAsJson = await GetRootJson(_baseAddress, hourlyForecastUri ??
 				throw new ArgumentNullException(
 					$"{nameof(GetRootJson)} was called with {nameof(hourlyForecastUri)} as null."));
+
+			string alertsAsJson = await GetRootJson(_baseAddress, allAlertsUri);
 
 			_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
 				throw new ArgumentNullException(
@@ -168,23 +173,9 @@ else
 			throw new InvalidOperationException();
 	}
 
-	// TODO: Refactor these 3 methods into one method that returns a Task<string>
-	// private async Task GetPointRootJson(string pointRequestUri)
-	// {
-	// 	_pointRootAsJson = await apiReader.ReadAsync(_baseAddress, pointRequestUri);
-	// }
-	// private async Task GetForecastJson(string forecastRequestUri)
-	// {
-	// 	_forecastAsJson = await apiReader.ReadAsync(_baseAddress, forecastRequestUri);
-	// }
-	// private async Task GetHourlyForecastJson(string hourlyRequestUri)
-	// {
-	// 	_hourlyForecastAsJson = await apiReader.ReadAsync(_baseAddress, hourlyRequestUri);
-	// }
-
-	private async Task<string> GetRootJson(string pointRequestUri)
+	private async Task<string> GetRootJson(string baseAddress, string requestUri)
 	{
-		string result = await apiReader.ReadAsync(_baseAddress, pointRequestUri);
+		string result = await apiReader.ReadAsync(baseAddress, requestUri);
 		return result;
 	}
 

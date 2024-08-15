@@ -2,6 +2,13 @@ html {
     font-size: 16px;
 }
 
+body {
+    background-color: dimgray;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: lightgray;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

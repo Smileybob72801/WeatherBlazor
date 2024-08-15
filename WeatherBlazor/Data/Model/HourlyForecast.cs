@@ -54,7 +54,7 @@ namespace WeatherBlazor.Data.Model
 
 	public record HourlyForecastRelativeHumidity(
 		[property: JsonPropertyName("unitCode")] string unitCode,
-		[property: JsonPropertyName("value")] int value
+		[property: JsonPropertyName("value")] int humidityValue
 	);
 
 	public record HourlyForecastRoot(

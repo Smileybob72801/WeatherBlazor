@@ -82,9 +82,9 @@
 					{
 						<div class="expanded-content">
 							<p><strong>@period.temperature @period.temperatureUnit</strong></p>
+							<p><strong>Heat Index: @GetHighestHeatIndexForForecastPeriod(period)</strong></p>
 							<p><strong>@period.detailedForecast</strong></p>
 							<p><strong>Wind speeds of @(period.windSpeed)</strong></p>
-							<p><strong>@period.</strong></p>
 							@if (alerts is not null)
 							{
 								<div class="alert-list">
@@ -158,6 +158,7 @@ else
 	private HourlyForecastRoot? _hourlyForecastRoot;
 	private AlertRoot? _alertRoot;
 	private SunriseSunsetRoot? _sunriseSunsetRoot;
+	private GridDataRoot? _gridDataRoot;
 
 	private Dictionary<int, bool> _expandedStates = [];
 
@@ -234,7 +235,7 @@ else
 
 			_sunriseSunsetRoot = SetRoot<SunriseSunsetRoot>(sunRiseSunSetAsJson);
 
-			
+			//_gridDataRoot = SetRoot<GridDataRoot>(_gridDataAsJson);
 
 			StateHasChanged();
 		}
@@ -524,5 +525,63 @@ else
 		}
 
 		return "Calm";
+	}
+
+	private int CalculateHeatIndex(double temperature, double relativeHumidity)
+	{
+		double c1 = -42.379;
+		double c2 = 2.04901523;
+		double c3 = 10.14333127;
+		double c4 = -0.22475541;
+		double c5 = -6.83783e-03;
+		double c6 = -5.481717e-02;
+		double c7 = 1.22874e-03;
+		double c8 = 8.5282e-04;
+		double c9 = -1.99e-06;
+
+		double heatIndex = c1
+			+ (c2 * temperature)
+			+ (c3 * relativeHumidity)
+			+ (c4 * temperature * relativeHumidity)
+			+ (c5 * Math.Pow(temperature, 2))
+			+ (c6 * Math.Pow(relativeHumidity, 2))
+			+ (c7 * Math.Pow(temperature, 2) * relativeHumidity)
+			+ (c8 * temperature * Math.Pow(relativeHumidity, 2))
+			+ (c9 * Math.Pow(temperature, 2) * Math.Pow(relativeHumidity, 2));
+
+		return (int)heatIndex;
+	}
+
+	private double GetHighestHeatIndexForForecastPeriod(ForecastPeriod forecastPeriod)
+	{
+		try
+		{
+			double highestHeatIndexPerPeriod = 0;
+
+			var matchingHourlyForecasts = _hourlyForecastRoot?.properties.periods
+					.Where(hourly => hourly.startTime >= forecastPeriod.startTime &&
+					hourly.startTime <= forecastPeriod.endTime);
+
+			if (matchingHourlyForecasts is null) return highestHeatIndexPerPeriod;
+
+			foreach (HourlyForecastPeriod? hourly in matchingHourlyForecasts)
+			{
+				double heatIndex = 0;
+
+				heatIndex = CalculateHeatIndex(hourly.temperature, (double)hourly.relativeHumidity.humidityValue);
+
+				if (heatIndex > highestHeatIndexPerPeriod)
+				{
+					highestHeatIndexPerPeriod = heatIndex;
+				}
+			}
+
+			return highestHeatIndexPerPeriod;
+		}
+		catch(Exception ex)
+		{
+			Console.WriteLine(ex);
+			throw;
+		}
 	}
 }

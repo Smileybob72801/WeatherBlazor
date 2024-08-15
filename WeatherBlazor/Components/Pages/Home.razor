@@ -20,7 +20,7 @@
 		if (_hourlyForecastRoot is not null)
 		{
 			HourlyForecastPeriod? currentHourForecast = GetClosestHourlyForeCast(_hourlyForecastRoot);
-			List<string>? currentAlerts = GetAlertEventsForToday();
+			Dictionary<string, string>? currentAlerts = GetAlertEventsForToday();
 
 			<div class="current-forecast-banner">
 				<div class="current-forecast-content">
@@ -33,12 +33,13 @@
 						@if (currentAlerts is not null)
 						{
 							<div class="current-alert-list">
-								@foreach (var alert in currentAlerts)
+								@foreach (KeyValuePair<string, string> alert in currentAlerts)
 								{
-									<p class="current-alert-event"><strong>Alert: @alert</strong></p>
+									<p class="current-alert-event"><strong>@alert.Key beginning at @alert.Value</strong></p>
 								}
 							</div>
 						}
+
 					</div>
 				</div>
 			</div>
@@ -76,7 +77,7 @@
 						<div class="alert-list">
 							@foreach (var alert in alerts)
 							{
-								<p class="alert-event"><strong>Alert: @alert</strong></p>
+								<p class="alert-event"><strong>@alert</strong></p>
 							}
 						</div>
 					}
@@ -280,9 +281,9 @@ else
 		return alerts;
 	}
 
-	private List<string>? GetAlertEventsForToday()
+	private Dictionary<string, string>? GetAlertEventsForToday()
 	{
-		List<string>? alerts = new();
+		Dictionary<string, string>? alerts = new();
 
 		if (_alertRoot?.features is not null)
 		{
@@ -293,9 +294,9 @@ else
 				AlertProperties properties = feature.properties;
 
 				if ((properties.onset.Date == today || properties.ends.Date == today) &&
-					!alerts.Contains(properties.@event))
+					!alerts.TryGetValue(properties.@event, out _))
 				{
-					alerts.Add(properties.@event);
+					alerts[properties.@event] = properties.onset.ToString(_timeFormat);
 				}
 			}
 		}

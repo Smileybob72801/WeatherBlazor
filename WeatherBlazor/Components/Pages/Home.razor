@@ -51,37 +51,53 @@
 			{
 				List<string>? alerts = GetAlertEventsForPeriod(period);
 
-				<div class="forecast-tile">
-
+				<div class="forecast-tile @(IsPeriodExpanded(period) ? "expanded" : "")" @onclick="() => ToggleIsExpanded(period)">
 					<p><strong>@period.name</strong></p>
-
 					<div class="image-container">
 						<img src="@GetForecastImageUrl(period)" alt="Weather icon" class="weather-icon" />
-
 						@if (period.probabilityOfPrecipitation.value > 0)
 						{
-							<div class="precipitation-chance">
+							<p class="precipitation-chance">
 								@period.probabilityOfPrecipitation.value %
-							</div>
+							</p>
 						}
 					</div>
 
-					<p><strong>@period.temperature @period.temperatureUnit</strong></p>
-
-					<p><strong>@period.shortForecast</strong></p>
-
-					<p><strong>@DescribeWindSpeed(period.windSpeed)</strong></p>
-
-					@if (alerts is not null)
+					@if (!IsPeriodExpanded(period))
 					{
-						<div class="alert-list">
-							@foreach (var alert in alerts)
+						<p><strong>@period.temperature @period.temperatureUnit</strong></p>
+						<p><strong>@period.shortForecast</strong></p>
+						<p><strong>@DescribeWindSpeed(period.windSpeed)</strong></p>
+						@if (alerts is not null)
+						{
+							<div class="alert-list">
+								@foreach (var alert in alerts)
+								{
+									<p class="alert-event"><strong>@alert</strong></p>
+								}
+							</div>
+						}
+					}
+					else
+					{
+						<div class="expanded-content">
+							<p><strong>@period.temperature @period.temperatureUnit</strong></p>
+							<p><strong>@period.detailedForecast</strong></p>
+							<p><strong>Wind speeds of @(period.windSpeed)</strong></p>
+							<p><strong>@period.</strong></p>
+							@if (alerts is not null)
 							{
-								<p class="alert-event"><strong>@alert</strong></p>
+								<div class="alert-list">
+									@foreach (var alert in alerts)
+									{
+										<p class="alert-event"><strong>@alert</strong></p>
+									}
+								</div>
 							}
 						</div>
 					}
 				</div>
+
 			}
 		</div>
 
@@ -135,12 +151,15 @@ else
 	private string? _forecastAsJson;
 	private string? _pointRootAsJson;
 	private string? _hourlyForecastAsJson;
+	private string? _gridDataAsJson;
 
 	private PointRoot? _pointRoot;
 	private ForecastRoot? _forecastRoot;
 	private HourlyForecastRoot? _hourlyForecastRoot;
 	private AlertRoot? _alertRoot;
 	private SunriseSunsetRoot? _sunriseSunsetRoot;
+
+	private Dictionary<int, bool> _expandedStates = [];
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -180,6 +199,9 @@ else
 			string? forecastUri = forecastFullUrl?[_baseAddressNWS.Length..];
 			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddressNWS.Length..];
 
+			string? gridDataFullUrl = _pointRoot?.properties.forecastGridData;
+			string? gridDataUri = gridDataFullUrl?[_baseAddressNWS.Length..];
+
 			// Getting JSONs
 			_forecastAsJson = await GetRootJson(_baseAddressNWS, forecastUri ??
 				throw new ArgumentNullException(
@@ -188,6 +210,10 @@ else
 			_hourlyForecastAsJson = await GetRootJson(_baseAddressNWS, hourlyForecastUri ??
 				throw new ArgumentNullException(
 					$"{nameof(GetRootJson)} was called with {nameof(hourlyForecastUri)} as null."));
+
+			_gridDataAsJson = await GetRootJson(_baseAddressNWS, gridDataUri ??
+				throw new ArgumentNullException(
+					$"{nameof(GetRootJson)} was called with {nameof(gridDataUri)} as null."));
 
 			string alertsAsJson = await GetRootJson(_baseAddressNWS, allAlertsUri);
 
@@ -207,6 +233,8 @@ else
 			_alertRoot = SetRoot<AlertRoot>(alertsAsJson);
 
 			_sunriseSunsetRoot = SetRoot<SunriseSunsetRoot>(sunRiseSunSetAsJson);
+
+			
 
 			StateHasChanged();
 		}
@@ -268,9 +296,24 @@ else
 		public double Longitude { get; set; }
 	}
 
+	private bool IsPeriodExpanded(ForecastPeriod period) =>
+		_expandedStates.TryGetValue(period.number, out bool isExpanded) && isExpanded;
+
+	private void ToggleIsExpanded(ForecastPeriod period)
+	{
+		if (_expandedStates.TryGetValue(period.number, out bool isExpanded))
+		{
+			_expandedStates[period.number] = !isExpanded;
+		}
+		else
+		{
+			_expandedStates[period.number] = true;
+		}
+	}
+
 	private List<string>? GetAlertEventsForPeriod(ForecastPeriod period)
 	{
-		List<string>? alerts = new();
+		List<string>? alerts = [];
 
 		if (_alertRoot?.features is not null)
 		{
@@ -292,7 +335,7 @@ else
 
 	private Dictionary<string, string>? GetAlertEventsForToday()
 	{
-		Dictionary<string, string>? alerts = new();
+		Dictionary<string, string>? alerts = [];
 
 		if (_alertRoot?.features is not null)
 		{

@@ -112,6 +112,7 @@
 	</div>
 
 	<a href="https://www.vecteezy.com/free-vector/weather">Weather Vectors by Vecteezy</a>
+	<p>Powered by <a href="https://sunrisesunset.io/">SunriseSunset.io</a></p>
 }
 else
 {
@@ -124,11 +125,12 @@ else
 	private bool _isFirstRender = true;
 
 	private const string _dayFormat = "dddd";
-	private const string _timeFormat = "HH:mm";
+	private const string _timeFormat = "hh:mm tt";
 
 	private Location? _location;
 
-	private const string _baseAddress = "https://api.weather.gov/";
+	private const string _baseAddressNWS = "https://api.weather.gov/";
+	private const string _baseAddressSunriseSunset = "https://api.sunrisesunset.io/";
 
 	private string? _forecastAsJson;
 	private string? _pointRootAsJson;
@@ -138,6 +140,7 @@ else
 	private ForecastRoot? _forecastRoot;
 	private HourlyForecastRoot? _hourlyForecastRoot;
 	private AlertRoot? _alertRoot;
+	private SunriseSunsetRoot? _sunriseSunsetRoot;
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -156,14 +159,16 @@ else
 			string pointRequestUri = string.Empty;
 			string allAlertsUri = string.Empty;
 			string activeAlertsUri = string.Empty;
+			string sunriseSunsetUri = string.Empty;
 			if (_location is not null)
 			{
 				pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
 				allAlertsUri = $"/alerts?point={_location.Latitude},{_location.Longitude}";
 				activeAlertsUri = $"/alerts/active?point={_location.Latitude},{_location.Longitude}";
+				sunriseSunsetUri = $"/json?lat={_location.Latitude}&lng={_location.Longitude}";
 			}
 
-			_pointRootAsJson = await GetRootJson(_baseAddress, pointRequestUri);
+			_pointRootAsJson = await GetRootJson(_baseAddressNWS, pointRequestUri);
 
 			_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
 				throw new ArgumentNullException(
@@ -172,21 +177,23 @@ else
 			string? forecastFullUrl = _pointRoot?.properties.forecast;
 			string? hourlyForeCastFullUrl = _pointRoot?.properties.forecastHourly;
 
-			string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
-			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddress.Length..];
+			string? forecastUri = forecastFullUrl?[_baseAddressNWS.Length..];
+			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddressNWS.Length..];
 
 			// Getting JSONs
-			_forecastAsJson = await GetRootJson(_baseAddress, forecastUri ??
+			_forecastAsJson = await GetRootJson(_baseAddressNWS, forecastUri ??
 				throw new ArgumentNullException(
 					$"{nameof(GetRootJson)} was called with {nameof(forecastUri)} as null."));
 
-			_hourlyForecastAsJson = await GetRootJson(_baseAddress, hourlyForecastUri ??
+			_hourlyForecastAsJson = await GetRootJson(_baseAddressNWS, hourlyForecastUri ??
 				throw new ArgumentNullException(
 					$"{nameof(GetRootJson)} was called with {nameof(hourlyForecastUri)} as null."));
 
-			string alertsAsJson = await GetRootJson(_baseAddress, allAlertsUri);
+			string alertsAsJson = await GetRootJson(_baseAddressNWS, allAlertsUri);
 
-			string activeAlertsAsJson = await GetRootJson(_baseAddress, activeAlertsUri);
+			string activeAlertsAsJson = await GetRootJson(_baseAddressNWS, activeAlertsUri);
+
+			string sunRiseSunSetAsJson = await GetRootJson(_baseAddressSunriseSunset, sunriseSunsetUri);
 
 			// Setting Roots
 			_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
@@ -198,6 +205,8 @@ else
 					$"{nameof(SetRoot)} was called with {nameof(_hourlyForecastAsJson)} as null."));
 
 			_alertRoot = SetRoot<AlertRoot>(alertsAsJson);
+
+			_sunriseSunsetRoot = SetRoot<SunriseSunsetRoot>(sunRiseSunSetAsJson);
 
 			StateHasChanged();
 		}
@@ -308,6 +317,18 @@ else
 	{
 		StringComparison comparison = StringComparison.OrdinalIgnoreCase;
 
+		DateTime now = DateTime.Now;
+
+		DateTime.TryParse(_sunriseSunsetRoot?.results.dawn, out DateTime dawn);
+
+		DateTime.TryParse(_sunriseSunsetRoot?.results.sunrise, out DateTime sunrise);
+		sunrise = sunrise.AddMinutes(5);
+
+		DateTime.TryParse(_sunriseSunsetRoot?.results.sunset, out DateTime sunset);
+		sunset = sunset.AddMinutes(-5);
+
+		DateTime.TryParse(_sunriseSunsetRoot?.results.dusk, out DateTime dusk);
+
 		if (hourlyForecastPeriod.shortForecast.Contains("shower", comparison) ||
 			hourlyForecastPeriod.shortForecast.Contains("storm", comparison))
 		{
@@ -320,6 +341,10 @@ else
 		else if (hourlyForecastPeriod.shortForecast.Contains("shower", comparison))
 		{
 			return "images/WeatherElementIcons/showers.png";
+		}
+		else if ((dawn <= now && now <= sunrise) || (sunset <= now && now <= dusk))
+		{
+			return "images/WeatherElementIcons/dawnOrDusk.png";
 		}
 		else if (hourlyForecastPeriod.shortForecast.Contains("cloudy", comparison))
 		{
@@ -406,6 +431,7 @@ else
 	private HourlyForecastPeriod GetClosestHourlyForeCast(HourlyForecastRoot hourlyForecastRoot)
 	{
 		DateTime now = DateTime.Now;
+
 		DateTime nearestHour = new(now.Year, now.Month, now.Day, now.Hour, 0, 0);
 
 		if (now.Minute >= 30)

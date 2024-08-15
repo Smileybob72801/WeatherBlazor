@@ -85,9 +85,11 @@ else
 
 	private string? _forecastAsJson;
 	private string? _pointRootAsJson;
+	private string? _hourlyForecastAsJson;
 
 	private PointRoot? _pointRoot;
 	private ForecastRoot? _forecastRoot;
+	private HourlyForecastRoot? _hourlyForecastRoot;
 
 	private void SetForecastRoot(string forecastAsJson)
 	{
@@ -117,6 +119,11 @@ else
 	private async Task GetForecastJson(string forecastRequestUri)
 	{
 		_forecastAsJson = await apiReader.ReadAsync(_baseAddress, forecastRequestUri);
+	}
+
+	private async Task GetHourlyForecastJson(string hourlyRequestUri)
+	{
+		_hourlyForecastAsJson = await apiReader.ReadAsync(_baseAddress, hourlyRequestUri);
 	}
 
 	private string ProcessDateString(string dateString, string formatString)
@@ -188,15 +195,26 @@ else
 					$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
 
 			string? forecastFullUrl = _pointRoot?.properties.forecast;
+			string? hourlyForeCastFullUrl = _pointRoot?.properties.forecastHourly;
+
 			string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
+			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddress.Length..];
 
 			await GetForecastJson(forecastUri ??
 				throw new ArgumentNullException(
 					$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
 
+			await GetHourlyForecastJson(hourlyForecastUri ??
+				throw new ArgumentNullException(
+					$"{nameof(GetHourlyForecastJson)} was called with {nameof(hourlyForecastUri)} as null."));
+
 			_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
 				throw new ArgumentNullException(
 					$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
+
+			_hourlyForecastRoot = SetRoot<HourlyForecastRoot>(_hourlyForecastAsJson ??
+				throw new ArgumentNullException(
+					$"{nameof(SetRoot)} was called with {nameof(_hourlyForecastAsJson)} as null."));
 
 			StateHasChanged();
 		}
@@ -268,11 +286,11 @@ else
 			highestWindSpeedInRange = result;
 		}
 
-		if (highestWindSpeedInRange > 0 || highestWindSpeedInRange <= 5)
+		if (highestWindSpeedInRange > 0 || highestWindSpeedInRange < 5)
 		{
 			return "Breezy";
 		}
-		else if (highestWindSpeedInRange > 5 || highestWindSpeedInRange <= 30)
+		else if (highestWindSpeedInRange >= 5 || highestWindSpeedInRange <= 30)
 		{
 			return "Strong Winds";
 		}

@@ -2,6 +2,7 @@
 
 namespace WeatherBlazor.Data.Model
 {
+#pragma warning disable
 	public record HourlyForecastDewpoint(
 		[property: JsonPropertyName("unitCode")] string unitCode,
 		[property: JsonPropertyName("value")] double value
@@ -62,4 +63,5 @@ namespace WeatherBlazor.Data.Model
 		[property: JsonPropertyName("geometry")] HourlyForecastGeometry geometry,
 		[property: JsonPropertyName("properties")] HourlyForecastProperties properties
 	);
+#pragma warning enable
 }

@@ -17,13 +17,30 @@
 {
 	if (_forecastRoot is not null)
 	{
+		if (_hourlyForecastRoot is not null)
+		{
+			HourlyForecastPeriod? currentHourForecast = GetClosestHourlyForeCast(_hourlyForecastRoot);
+
+			<div class="current-forecast-banner">
+				<div class="current-forecast-content">
+					<div class="banner-image-container">
+						<img src="@GetHourlyForecastImageUrl(currentHourForecast)" alt="Current Weather Icon" class="banner-weather-icon" />
+					</div>
+					<div class="banner-text">
+						<p><strong>Current Conditions:</strong> @currentHourForecast.temperature @currentHourForecast.temperatureUnit, @currentHourForecast.shortForecast</p>
+					</div>
+				</div>
+			</div>
+
+		}
+
 		<div class="forecast-container">
 			@foreach (ForecastPeriod period in _forecastRoot.properties.periods)
 			{
 				<div class="forecast-tile">
 					<p><strong>@period.name</strong></p>
 					<div class="image-container">
-						<img src="@GetImageUrl(period)" alt="Weather icon" class="weather-icon" />
+						<img src="@GetForecastImageUrl(period)" alt="Weather icon" class="weather-icon" />
 						@if (period.probabilityOfPrecipitation.value > 0)
 						{
 							<div class="precipitation-chance">
@@ -68,7 +85,7 @@
 }
 else
 {
-	<p>Loading forecast data...</p>
+	<p>Loading weather data...</p>
 }
 
 
@@ -91,16 +108,56 @@ else
 	private ForecastRoot? _forecastRoot;
 	private HourlyForecastRoot? _hourlyForecastRoot;
 
-	private void SetForecastRoot(string forecastAsJson)
+	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
-		ArgumentNullException.ThrowIfNull(forecastAsJson);
-		_forecastRoot = jsonDeserializer.Deserialize<ForecastRoot>(forecastAsJson);
-	}
+		if (_isFirstRender)
+		{
+			_isFirstRender = false;
 
-	private void SetPointRoot(string pointRootAsJson)
-	{
-		ArgumentNullException.ThrowIfNull(pointRootAsJson);
-		_pointRoot = jsonDeserializer.Deserialize<PointRoot>(pointRootAsJson);
+			_location = await GetLocation();
+
+			if (_location is null)
+			{
+				Console.WriteLine("Location data is not available.");
+				return;
+			}
+
+			string pointRequestUri = string.Empty;
+			if (_location is not null)
+			{
+				pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
+			}
+
+			_pointRootAsJson = await GetRootJson(pointRequestUri);
+
+			_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
+				throw new ArgumentNullException(
+					$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
+
+			string? forecastFullUrl = _pointRoot?.properties.forecast;
+			string? hourlyForeCastFullUrl = _pointRoot?.properties.forecastHourly;
+
+			string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
+			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddress.Length..];
+
+			_forecastAsJson = await GetRootJson(forecastUri ??
+				throw new ArgumentNullException(
+					$"{nameof(GetRootJson)} was called with {nameof(forecastUri)} as null."));
+
+			_hourlyForecastAsJson = await GetRootJson(hourlyForecastUri ??
+				throw new ArgumentNullException(
+					$"{nameof(GetRootJson)} was called with {nameof(hourlyForecastUri)} as null."));
+
+			_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
+				throw new ArgumentNullException(
+					$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
+
+			_hourlyForecastRoot = SetRoot<HourlyForecastRoot>(_hourlyForecastAsJson ??
+				throw new ArgumentNullException(
+					$"{nameof(SetRoot)} was called with {nameof(_hourlyForecastAsJson)} as null."));
+
+			StateHasChanged();
+		}
 	}
 
 	private T SetRoot<T>(string rootAsJson)
@@ -111,19 +168,24 @@ else
 			throw new InvalidOperationException();
 	}
 
-	private async Task GetPointRootJson(string pointRequestUri)
-	{
-		_pointRootAsJson = await apiReader.ReadAsync(_baseAddress, pointRequestUri);
-	}
+	// TODO: Refactor these 3 methods into one method that returns a Task<string>
+	// private async Task GetPointRootJson(string pointRequestUri)
+	// {
+	// 	_pointRootAsJson = await apiReader.ReadAsync(_baseAddress, pointRequestUri);
+	// }
+	// private async Task GetForecastJson(string forecastRequestUri)
+	// {
+	// 	_forecastAsJson = await apiReader.ReadAsync(_baseAddress, forecastRequestUri);
+	// }
+	// private async Task GetHourlyForecastJson(string hourlyRequestUri)
+	// {
+	// 	_hourlyForecastAsJson = await apiReader.ReadAsync(_baseAddress, hourlyRequestUri);
+	// }
 
-	private async Task GetForecastJson(string forecastRequestUri)
+	private async Task<string> GetRootJson(string pointRequestUri)
 	{
-		_forecastAsJson = await apiReader.ReadAsync(_baseAddress, forecastRequestUri);
-	}
-
-	private async Task GetHourlyForecastJson(string hourlyRequestUri)
-	{
-		_hourlyForecastAsJson = await apiReader.ReadAsync(_baseAddress, hourlyRequestUri);
+		string result = await apiReader.ReadAsync(_baseAddress, pointRequestUri);
+		return result;
 	}
 
 	private string ProcessDateString(string dateString, string formatString)
@@ -167,95 +229,36 @@ else
 		public double Latitude { get; set; }
 		public double Longitude { get; set; }
 	}
-
-	protected override async Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (_isFirstRender)
-		{
-			_isFirstRender = false;
-
-			_location = await GetLocation();
-
-			if (_location is null)
-			{
-				Console.WriteLine("Location data is not available.");
-				return;
-			}
-
-			string pointRequestUri = string.Empty;
-			if (_location is not null)
-			{
-				pointRequestUri = $"/points/{_location.Latitude},{_location.Longitude}";
-			}
-
-			await GetPointRootJson(pointRequestUri);
-
-			_pointRoot = SetRoot<PointRoot>(_pointRootAsJson ??
-				throw new ArgumentNullException(
-					$"{nameof(SetRoot)} was called with {nameof(_pointRootAsJson)} as null."));
-
-			string? forecastFullUrl = _pointRoot?.properties.forecast;
-			string? hourlyForeCastFullUrl = _pointRoot?.properties.forecastHourly;
-
-			string? forecastUri = forecastFullUrl?[_baseAddress.Length..];
-			string? hourlyForecastUri = hourlyForeCastFullUrl?[_baseAddress.Length..];
-
-			await GetForecastJson(forecastUri ??
-				throw new ArgumentNullException(
-					$"{nameof(GetForecastJson)} was called with {nameof(forecastUri)} as null."));
-
-			await GetHourlyForecastJson(hourlyForecastUri ??
-				throw new ArgumentNullException(
-					$"{nameof(GetHourlyForecastJson)} was called with {nameof(hourlyForecastUri)} as null."));
-
-			_forecastRoot = SetRoot<ForecastRoot>(_forecastAsJson ??
-				throw new ArgumentNullException(
-					$"{nameof(SetRoot)} was called with {nameof(_forecastAsJson)} as null."));
-
-			_hourlyForecastRoot = SetRoot<HourlyForecastRoot>(_hourlyForecastAsJson ??
-				throw new ArgumentNullException(
-					$"{nameof(SetRoot)} was called with {nameof(_hourlyForecastAsJson)} as null."));
-
-			StateHasChanged();
-		}
-	}
-
-	private string GetImageUrl(ForecastPeriod period)
+	
+	private string GetHourlyForecastImageUrl(HourlyForecastPeriod hourlyForecastPeriod)
 	{
 		StringComparison comparison = StringComparison.OrdinalIgnoreCase;
 
-		if (period.detailedForecast.Contains("sunny", comparison) && period.detailedForecast.Contains("storm", comparison))
-		{
-			return "images/WeatherElementIcons/sunnyTStorm.png";
-		}
-		if (period.detailedForecast.Contains("sunny", comparison) && period.detailedForecast.Contains("shower", comparison))
-		{
-			return "images/WeatherElementIcons/sunnyShowers.png";
-		}
-		else if (period.detailedForecast.Contains("storm", comparison) && period.detailedForecast.Contains("shower", comparison))
+		if (hourlyForecastPeriod.shortForecast.Contains("shower", comparison) ||
+			hourlyForecastPeriod.shortForecast.Contains("storm", comparison))
 		{
 			return "images/WeatherElementIcons/showersAndTStorms.png";
 		}
-		else if (period.detailedForecast.Contains("storm", comparison))
+		else if (hourlyForecastPeriod.shortForecast.Contains("storm", comparison))
 		{
 			return "images/WeatherElementIcons/tStorm.png";
 		}
-		else if (period.detailedForecast.Contains("shower", comparison))
+		else if (hourlyForecastPeriod.shortForecast.Contains("shower", comparison))
 		{
 			return "images/WeatherElementIcons/showers.png";
 		}
-		else if (period.detailedForecast.Contains("mostly cloudy", comparison))
+		else if (hourlyForecastPeriod.shortForecast.Contains("cloudy", comparison))
 		{
-			if (period.isDaytime)
+			if (hourlyForecastPeriod.isDaytime)
 			{
 				return "images/WeatherElementIcons/mostlyCloudyDay.png";
 			}
 
 			return "images/WeatherElementIcons/mostlyCloudyNight.png";
 		}
-		else if (period.detailedForecast.Contains("mostly clear", comparison))
+		else if (hourlyForecastPeriod.shortForecast.Contains("mostly clear", comparison))
 		{
-			if (period.isDaytime)
+			if (hourlyForecastPeriod.isDaytime)
 			{
 				return "images/WeatherElementIcons/mostlyClearDay.png";
 			}
@@ -264,13 +267,87 @@ else
 		}
 		else
 		{
-			if(period.isDaytime)
+			if (hourlyForecastPeriod.isDaytime)
 			{
 				return "images/WeatherElementIcons/sunny.png";
 			}
 
 			return "images/WeatherElementIcons/moon.png";
 		}
+	}
+
+	private string GetForecastImageUrl(ForecastPeriod forecastPeriod)
+	{
+		StringComparison comparison = StringComparison.OrdinalIgnoreCase;
+
+		if (forecastPeriod.detailedForecast.Contains("sunny", comparison) && forecastPeriod.detailedForecast.Contains("storm", comparison))
+		{
+			return "images/WeatherElementIcons/sunnyTStorm.png";
+		}
+		if (forecastPeriod.detailedForecast.Contains("sunny", comparison) && forecastPeriod.detailedForecast.Contains("shower", comparison))
+		{
+			return "images/WeatherElementIcons/sunnyShowers.png";
+		}
+		else if (forecastPeriod.detailedForecast.Contains("storm", comparison) && forecastPeriod.detailedForecast.Contains("shower", comparison))
+		{
+			return "images/WeatherElementIcons/showersAndTStorms.png";
+		}
+		else if (forecastPeriod.detailedForecast.Contains("storm", comparison))
+		{
+			return "images/WeatherElementIcons/tStorm.png";
+		}
+		else if (forecastPeriod.detailedForecast.Contains("shower", comparison))
+		{
+			return "images/WeatherElementIcons/showers.png";
+		}
+		else if (forecastPeriod.detailedForecast.Contains("cloudy", comparison))
+		{
+			if (forecastPeriod.isDaytime)
+			{
+				return "images/WeatherElementIcons/mostlyCloudyDay.png";
+			}
+
+			return "images/WeatherElementIcons/mostlyCloudyNight.png";
+		}
+		else if (forecastPeriod.detailedForecast.Contains("mostly clear", comparison))
+		{
+			if (forecastPeriod.isDaytime)
+			{
+				return "images/WeatherElementIcons/mostlyClearDay.png";
+			}
+
+			return "images/WeatherElementIcons/mostlyClearNight.png";
+		}
+		else
+		{
+			if(forecastPeriod.isDaytime)
+			{
+				return "images/WeatherElementIcons/sunny.png";
+			}
+
+			return "images/WeatherElementIcons/moon.png";
+		}
+	}
+
+	private HourlyForecastPeriod GetClosestHourlyForeCast(HourlyForecastRoot hourlyForecastRoot)
+	{
+		DateTime now = DateTime.Now;
+		DateTime nearestHour = new(now.Year, now.Month, now.Day, now.Hour, 0, 0);
+
+		if (now.Minute >= 30)
+		{
+			nearestHour = nearestHour.AddHours(1);
+		}
+
+		foreach (HourlyForecastPeriod period in hourlyForecastRoot.properties.periods)
+		{
+			if (period.startTime >= nearestHour)
+			{
+				return period;
+			}
+		}
+
+		return hourlyForecastRoot.properties.periods.First(); // Fallback
 	}
 
 	private string DescribeWindSpeed(string rangeOfWindspeeds)
@@ -286,15 +363,15 @@ else
 			highestWindSpeedInRange = result;
 		}
 
-		if (highestWindSpeedInRange > 0 || highestWindSpeedInRange < 5)
+		if (highestWindSpeedInRange > 0 && highestWindSpeedInRange <= 5)
 		{
 			return "Breezy";
 		}
-		else if (highestWindSpeedInRange >= 5 || highestWindSpeedInRange <= 30)
+		else if (highestWindSpeedInRange > 5 && highestWindSpeedInRange <= 30)
 		{
-			return "Strong Winds";
+			return "Windy";
 		}
-		else if (highestWindSpeedInRange > 30 || highestWindSpeedInRange <= 75)
+		else if (highestWindSpeedInRange > 30 && highestWindSpeedInRange <= 75)
 		{
 			return "Gale Winds!";
 		}

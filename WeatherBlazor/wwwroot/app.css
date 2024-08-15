@@ -61,6 +61,39 @@ h1:focus {
     border-color: #929292;
 }
 
+.current-forecast-banner {
+    background-color: rgb(0, 23, 46);
+    color: lightgrey;
+    text-align: center;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.250rem 0.5rem rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.current-forecast-content {
+    display: flex;
+    align-items: center;
+}
+
+.banner-image-container {
+    flex-shrink: 0;
+    margin-right: 1rem;
+}
+
+.banner-weather-icon {
+    max-height: 100px;
+    width: auto;
+}
+
+.banner-text {
+    flex-grow: 1;
+}
+
 .forecast-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -72,24 +105,24 @@ h1:focus {
     background-color: rgb(0, 23, 46);
     color: lightgrey;
     text-align: center;
-    text-shadow: 0.250rem 0.250rem 0.5rem rgba(0, 0, 0, 1);
+    text-shadow: 0.250rem 0.250rem 0.5rem rgba(0, 0, 0, 0.7);
     border-radius: 0.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0.250rem 0.5rem rgba(0, 0, 0, 0.4);
     padding: 1rem;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     align-items: center;
     overflow: hidden;
-    align-items: center; /* Center content horizontally */
+    align-items: center;
 }
 
     .forecast-tile p {
-        margin: 0.5rem 0; /* Add vertical margin between paragraphs */
+        margin: 0.5rem 0;
     }
 
     .forecast-tile strong {
-        margin: 0; /* Remove default margin for consistency */
+        margin: 0;
     }
 
 .image-container {
@@ -110,15 +143,15 @@ h1:focus {
 
 .precipitation-chance {
     position: absolute;
-    bottom: 0.5rem; /* Adjust the distance from the bottom */
-    right: 0.5rem; /* Adjust the distance from the right */
+    bottom: 0.5rem;
+    right: 0.5rem;
     color: lightgrey;
     text-shadow: 0.250rem 0.250rem 0.5rem rgba(0, 0, 0, 1);
-    background-color: rgba(0, 0, 0, 0.6); /* Optional: Add a background to improve readability */
-    color: white; /* Text color */
-    padding: 0.25rem 0.5rem; /* Optional: Padding around the text */
-    border-radius: 0.25rem; /* Optional: Rounded corners */
-    font-size: 1rem; /* Adjust font size as needed */
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 1rem;
 }
 
 .iframe-weatherRadar {

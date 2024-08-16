@@ -49,7 +49,7 @@
 		<div class="forecast-container">
 			@foreach (ForecastPeriod period in _forecastRoot.properties.periods)
 			{
-				List<string>? alerts = GetAlertEventsForPeriod(period);
+				Dictionary<string, (string?, string?)> alerts = GetAlertEventsForPeriod(period);
 
 				<div class="forecast-tile @(IsPeriodExpanded(period) ? "expanded" : "")" @onclick="() => ToggleIsExpanded(period)">
 					<p><strong>@period.name</strong></p>
@@ -71,9 +71,9 @@
 						@if (alerts is not null)
 						{
 							<div class="alert-list">
-								@foreach (var alert in alerts)
+								@foreach (KeyValuePair<string, (string?, string?)> alert in alerts)
 								{
-									<p class="alert-event"><strong>@alert</strong></p>
+									<p class="alert-event"><strong>@alert.Key</strong></p>
 								}
 							</div>
 						}
@@ -87,9 +87,10 @@
 							@if (alerts is not null)
 							{
 								<div class="alert-list">
-									@foreach (var alert in alerts)
+									@foreach (KeyValuePair<string, (string?, string?)> alert in alerts)
 									{
-										<p class="alert-event"><strong>@alert</strong></p>
+										<p class="alert-event"><strong>@alert.Value.Item1</strong></p>
+										<p class="alert-event"><strong>@alert.Value.Item2</strong></p>
 									}
 								</div>
 							}
@@ -303,26 +304,28 @@ else
 		}
 	}
 
-	private List<string>? GetAlertEventsForPeriod(ForecastPeriod period)
+	private Dictionary<string, (string? Headline, string? Instructions)> GetAlertEventsForPeriod(ForecastPeriod period)
 	{
-		List<string>? alerts = [];
+		Dictionary<string, (string? Headline, string? Instructions)> alertExpanded = [];
 
 		if (_alertRoot?.features is not null)
 		{
 			foreach (AlertFeature feature in _alertRoot.features)
 			{
-				AlertProperties properties = feature.properties;
+				AlertProperties alertProperties = feature.properties;
+				string? alertHeadline = alertProperties.parameters.NWSheadline.FirstOrDefault();
+				string? alertInstructions = alertProperties.instruction;
 
-				if (properties.onset <= period.endTime &&
-					properties.ends >= period.startTime &&
-					!alerts.Contains(properties.@event))
+				if (alertProperties.onset <= period.endTime &&
+					alertProperties.ends >= period.startTime &&
+					!alertExpanded.ContainsKey(alertProperties.@event))
 				{
-					alerts.Add(properties.@event);
+					alertExpanded[alertProperties.@event] = (alertHeadline, alertInstructions);
 				}
 			}
 		}
 
-		return alerts;
+		return alertExpanded;
 	}
 
 	private Dictionary<string, string>? GetAlertEventsForToday()

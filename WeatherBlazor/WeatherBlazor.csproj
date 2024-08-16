@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Remove="Data\Migrations\20240814100855_initial.cs" />
     <Compile Remove="Data\Migrations\20240814100855_initial.Designer.cs" />
+    <Compile Remove="Data\Model\GridData.cs" />
     <Compile Remove="Data\Model\WeatherForecast.cs" />
   </ItemGroup>
 

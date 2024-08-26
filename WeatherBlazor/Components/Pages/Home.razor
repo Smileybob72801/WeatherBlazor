@@ -272,7 +272,7 @@ else
 			string? longitudeFormatted = location.Longitude.ToString("F4");
 
 			location.Latitude = double.Parse(latitudeFormatted);
-			location.Longitude = double.Parse(longitudeFormatted);
+			location.Longitude = double.Parse(longitudeFormatted);			
 
 			return location;
 		}
@@ -313,11 +313,11 @@ else
 			foreach (AlertFeature feature in _alertRoot.features)
 			{
 				AlertProperties alertProperties = feature.properties;
-				string? alertHeadline = alertProperties.parameters.NWSheadline.FirstOrDefault();
+				string? alertHeadline = alertProperties.parameters.NWSheadline?.FirstOrDefault();
 				string? alertInstructions = alertProperties.instruction;
 
 				if (alertProperties.onset <= period.endTime &&
-					alertProperties.ends >= period.startTime &&
+					(alertProperties.ends is null || alertProperties.ends >= period.startTime) &&
 					!alertExpanded.ContainsKey(alertProperties.@event))
 				{
 					alertExpanded[alertProperties.@event] = (alertHeadline, alertInstructions);
@@ -340,7 +340,7 @@ else
 			{
 				AlertProperties properties = feature.properties;
 
-				if ((properties.onset.Date == today || properties.ends.Date == today) &&
+				if ((properties.onset.Date == today || properties.ends?.Date == today) &&
 					!alerts.TryGetValue(properties.@event, out _))
 				{
 					alerts[properties.@event] = properties.onset.ToString(_timeFormat);

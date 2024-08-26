@@ -46,7 +46,7 @@ namespace WeatherBlazor.Data.Model
 	);
 
 	public record ForecastRoot(
-		[property: JsonPropertyName("@context")] IReadOnlyList<object> context,
+		[property: JsonPropertyName("@context")] object context,
 		[property: JsonPropertyName("type")] string type,
 		[property: JsonPropertyName("geometry")] ForecastGeometry geometry,
 		[property: JsonPropertyName("properties")] ForecastProperties properties

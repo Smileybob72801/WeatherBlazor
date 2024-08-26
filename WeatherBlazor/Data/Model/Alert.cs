@@ -41,7 +41,7 @@ namespace WeatherBlazor.Data.Model
 		[property: JsonPropertyName("effective")] DateTime effective,
 		[property: JsonPropertyName("onset")] DateTime onset,
 		[property: JsonPropertyName("expires")] DateTime expires,
-		[property: JsonPropertyName("ends")] DateTime ends,
+		[property: JsonPropertyName("ends")] DateTime? ends,
 		[property: JsonPropertyName("status")] string status,
 		[property: JsonPropertyName("messageType")] string messageType,
 		[property: JsonPropertyName("category")] string category,
@@ -68,9 +68,9 @@ namespace WeatherBlazor.Data.Model
 	);
 
 	public record AlertRoot(
-		[property: JsonPropertyName("@context")] IReadOnlyList<object> context,
+		[property: JsonPropertyName("@context")] object context,
 		[property: JsonPropertyName("type")] string type,
-		[property: JsonPropertyName("features")] IReadOnlyList<AlertFeature> features,
+		[property: JsonPropertyName("features")] IReadOnlyList<AlertFeature>? features,
 		[property: JsonPropertyName("title")] string title,
 		[property: JsonPropertyName("updated")] DateTime updated,
 		[property: JsonPropertyName("pagination")] AlertPagination pagination

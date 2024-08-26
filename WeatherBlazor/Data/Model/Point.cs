@@ -49,7 +49,7 @@ namespace WeatherBlazor.Data.Model
 	);
 
 	public record PointRoot(
-		[property: JsonPropertyName("@context")] IReadOnlyList<object> context,
+		[property: JsonPropertyName("@context")] object context,
 		[property: JsonPropertyName("id")] string id,
 		[property: JsonPropertyName("type")] string type,
 		[property: JsonPropertyName("geometry")] PointGeometry geometry,

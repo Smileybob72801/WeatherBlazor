@@ -15,7 +15,9 @@
   
 [![Local NWS Radar](https://github.com/Smileybob72801/WeatherBlazor/blob/master/WeatherBlazor/Screenshots/WeatherBlazorMap.png?raw=true)](https://github.com/Smileybob72801/WeatherBlazor/blob/master/WeatherBlazor/Screenshots/WeatherBlazorMap.png?raw=true)
 
+## Instructions
 
+- Once built, run and navigate to https://localhost:7167 on your browser.
 
 ## Technologies Used
 

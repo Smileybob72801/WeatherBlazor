@@ -34,7 +34,7 @@ dotnet build
 dotnet run
 ```
 
-- Open your browser and navigate to https://localhost:7167.
+- Open your browser and navigate to http://localhost:5173.
 
 ## Technologies Used
 

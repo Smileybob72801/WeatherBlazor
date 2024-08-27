@@ -62,7 +62,8 @@ namespace WeatherBlazor
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            // Commented out for demo purposes
+            //app.UseHttpsRedirection();
 
             app.UseStaticFiles();
             app.UseAntiforgery();

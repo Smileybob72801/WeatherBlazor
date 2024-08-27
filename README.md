@@ -17,6 +17,12 @@
 
 ## Instructions
 
+- Download and unpack the latest release.
+- Run WeatherBlazor.exe.
+- Open your browser and navigate to http://localhost:5000.
+
+## Build the Project
+
 Clone the repository:
 ```bash
 git clone https://github.com/Smileybob72801/WeatherBlazor.git
@@ -34,7 +40,7 @@ dotnet build
 dotnet run
 ```
 
-- Open your browser and navigate to http://localhost:5173.
+- Console will indicate listening port, should be http://localhost:5173.
 
 ## Technologies Used
 
@@ -46,5 +52,8 @@ dotnet run
 
 ## Prerequisites
 
-- .NET SDK
-- Web browser
+- **.NET SDK 8.0** or later
+  - This project targets .NET 8.0, which includes support for ASP.NET Core applications.
+- **Web browser**
+  - For viewing and interacting with the Blazor WebAssembly application.
+

@@ -25,8 +25,6 @@
 - **HTML/CSS** for responsive and modern UI design.
 - **JAVASCRIPT** for geolocation functionality.
 
-## Setup and Installation
-
 ## Prerequisites
 
 - .NET SDK

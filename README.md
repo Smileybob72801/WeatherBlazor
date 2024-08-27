@@ -23,7 +23,7 @@ git clone https://github.com/Smileybob72801/WeatherBlazor.git
 ```
 
 ```bash
-cd WeatherBlazor
+cd WeatherBlazor/WeatherBlazor
 ```
 
 ```bash

@@ -11,8 +11,8 @@
 
 ## Screenshots
 
-![Weather Forecast](link-to-screenshot)
-![Local NWS Radar](link-to-screenshot)
+![Weather Forecast]([link-to-screenshot](https://github.com/Smileybob72801/WeatherBlazor/blob/master/WeatherBlazor/Screenshots/WeatherBlazorForecast.png?raw=true))
+![Local NWS Radar]([link-to-screenshot](https://github.com/Smileybob72801/WeatherBlazor/blob/master/WeatherBlazor/Screenshots/WeatherBlazorMap.png?raw=true))
 
 ## Technologies Used
 

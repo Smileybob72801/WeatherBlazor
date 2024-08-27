@@ -40,7 +40,7 @@ dotnet build
 dotnet run
 ```
 
-- Console will indicate listening port, should be http://localhost:5173.
+- Console will indicate listening port, should be http://localhost:5000.
 
 ## Technologies Used
 

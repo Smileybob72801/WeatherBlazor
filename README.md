@@ -52,5 +52,8 @@ dotnet run
 
 ## Prerequisites
 
-- .NET SDK
-- Web browser
+- **.NET SDK 8.0** or later
+  - This project targets .NET 8.0, which includes support for ASP.NET Core applications.
+- **Web browser**
+  - For viewing and interacting with the Blazor WebAssembly application.
+

@@ -17,7 +17,24 @@
 
 ## Instructions
 
-- Once built, run and navigate to https://localhost:7167 on your browser.
+Clone the repository:
+```bash
+git clone https://github.com/Smileybob72801/WeatherBlazor.git
+```
+
+```bash
+cd WeatherBlazor
+```
+
+```bash
+dotnet build
+```
+
+```bash
+dotnet run
+```
+
+- Open your browser and navigate to https://localhost:7167.
 
 ## Technologies Used
 

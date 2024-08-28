@@ -3,6 +3,7 @@
 @inject IJSRuntime JSRuntime
 @inject IApiReaderService apiReader
 @inject IJsonDeserializerService jsonDeserializer;
+@inject IRadarUrlService radarUrlService;
 @using System.Text;
 @using System.Text.Json.Serialization;
 @using System.Text.RegularExpressions
@@ -123,7 +124,7 @@
 	<div class="iframe-container">
 		<iframe
 			class="iframe-weatherRadar"
-			src="https://radar.weather.gov/?settings=v1_eyJhZ2VuZGEiOnsiaWQiOiJ3ZWF0aGVyIiwiY2VudGVyIjpbLTkzLjE0MSwzNS4yNzhdLCJsb2NhdGlvbiI6Wy05My4xNDEsMzUuMjc4XSwiem9vbSI6NywibGF5ZXIiOiJicmVmX3FjZCJ9LCJhbmltYXRpbmciOnRydWUsImJhc2UiOiJzdGFuZGFyZCIsImFydGNjIjpmYWxzZSwiY291bnR5IjpmYWxzZSwiY3dhIjpmYWxzZSwicmZjIjpmYWxzZSwic3RhdGUiOmZhbHNlLCJtZW51Ijp0cnVlLCJzaG9ydEZ1c2VkT25seSI6dHJ1ZSwib3BhY2l0eSI6eyJhbGVydHMiOjAuNzYsImxvY2FsIjowLjYsImxvY2FsU3RhdGlvbnMiOjAuOCwibmF0aW9uYWwiOjAuNn19"
+			src="@GetRadarUrl()"
 			allowfullscreen>
 		</iframe>
 	</div>
@@ -584,5 +585,19 @@ else
 			Console.WriteLine(ex);
 			throw;
 		}
+	}
+
+	private string? GetRadarUrl()
+	{
+		string result = string.Empty;
+
+		if (_location is not null)
+		{
+			result = radarUrlService.GenerateRadarUrl(_location.Longitude, _location.Latitude);
+		}
+
+		Console.WriteLine(result);
+
+		return !string.IsNullOrWhiteSpace(result) ? result : null;
 	}
 }

@@ -5,12 +5,12 @@ namespace WeatherBlazor.Services
 {
 	public interface IRadarUrlService
 	{
-		string GenerateRadarUrl(double latitude, double longitude, int zoomLevel = 7);
+		string GenerateRadarUrl(double longitude, double latitude, int zoomLevel = 7);
 	}
 
 	public class RadarUrlService : IRadarUrlService
 	{
-		public string GenerateRadarUrl(double latitude, double longitude, int zoomLevel = 7)
+		public string GenerateRadarUrl(double longitude, double latitude, int zoomLevel = 7)
 		{
 			// Create the JSON object
 			var radarSettings = new
@@ -18,8 +18,8 @@ namespace WeatherBlazor.Services
 				agenda = new
 				{
 					id = "weather",
-					center = new[] { latitude, longitude },
-					location = new[] { latitude, longitude },
+					center = new[] { longitude, latitude },
+					location = new[] { longitude, latitude },
 					zoom = zoomLevel,
 					layer = "bref_qcd"
 				},

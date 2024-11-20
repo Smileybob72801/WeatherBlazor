@@ -1,6 +1,6 @@
 # WeatherBlazor
 
-**WeatherBlazor** is a simple Blazor WebAssembly app that provides real-time weather information, forecasts, and weather alerts using data from the National Weather Service.
+**WeatherBlazor** is a Blazor WebAssembly app that provides real-time weather information, forecasts, and weather alerts using data from the National Weather Service.
 
 ## Features
 
